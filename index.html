@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calendrier cinéma</title>
+<style>
+body{margin:0;padding:20px;background:#020617;color:white;font-family:Arial}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+button{background:#1e293b;color:white;border:none;padding:12px 18px;border-radius:12px;cursor:pointer}
+#monthTitle{font-size:38px;font-weight:900}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.week{text-align:center;font-weight:700;opacity:.7;padding:10px}
+.cell{aspect-ratio:1/1.2;border-radius:18px;background:#111827;position:relative;overflow:hidden}
+.empty{background:transparent}
+.poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.1));display:flex;flex-direction:column;justify-content:flex-end;padding:10px}
+.daynum{position:absolute;top:8px;right:10px;font-size:22px;font-weight:900;z-index:2}
+.hidden{display:none}
+#detail{position:fixed;inset:0;background:#020617;padding:20px;overflow:auto;z-index:50}
+.detail{display:grid;grid-template-columns:320px 1fr;gap:30px}
+.big{width:100%;max-width:320px;border-radius:20px}
+iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:20px;background:black}
+</style>
+</head>
+<body>
+
+<div class="top">
+<button onclick="prevMonth()">⬅</button>
+<div id="monthTitle"></div>
+<button onclick="nextMonth()">➡</button>
+</div>
+
+<div id="calendar"></div>
+
+<div id="detail" class="hidden">
+<button onclick="closeDetail()">⬅ Retour</button>
+<div class="detail" style="margin-top:20px">
+<div><img id="bigposter" class="big"></div>
+<div>
+<h1 id="d_title"></h1>
+<p><b>Réalisateur :</b> <span id="d_director"></span></p>
+<p><b>Pays :</b> <span id="d_country"></span></p>
+<p><b>Année :</b> <span id="d_year"></span></p>
+<p><b>Durée :</b> <span id="d_runtime"></span></p>
+<p><b>Genres :</b> <span id="d_genre"></span></p>
+<p id="d_plot"></p>
+<iframe id="player"></iframe>
+</div>
+</div>
+</div>
+
+<script>
+const DATA = [{"date": "01/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "04/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "08/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "11/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "15/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "16/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "18/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "19/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "22/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "23/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "25/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "26/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "29/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "30/09/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "03/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "06/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "07/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "10/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "13/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "14/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "16/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "17/10/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "03/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "04/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "06/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "07/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "10/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "13/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "14/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "17/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "18/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "20/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "21/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "24/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "25/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "27/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "28/11/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "01/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "04/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "08/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "11/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "15/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "16/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "18/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "19/12/2025", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "06/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "08/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "13/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "15/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "16/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "19/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "20/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "22/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "23/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "26/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "27/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "29/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "30/01/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "03/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "06/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "10/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "13/02/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "03/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "06/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "10/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "13/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "16/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "17/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "19/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "20/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "23/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "24/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "26/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "27/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "30/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "31/03/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "03/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "07/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "10/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "27/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "28/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "30/04/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "04/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "07/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "11/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/05/2026", "youtube": "https://www.youtube.com/watch?v=psZmAsH6I3Q&t=1s", "imdb": "https://www.imdb.com/fr/title/tt12954622/", "réalisateur": "", "pays": "Angleterre", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": "https://pics.filmaffinity.com/a_cloudy_lesson-431584893-large.jpg"}, {"date": "18/05/2026", "youtube": "https://www.youtube.com/watch?v=r2kdrUDWjEk", "imdb": "https://www.imdb.com/fr/title/tt5062438/?ref_=fn_t_1", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "19/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "21/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "22/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "26/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "28/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "29/05/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "01/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "04/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "05/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "08/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "09/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "11/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "12/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "15/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "16/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "18/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "19/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "22/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "23/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "25/06/2026", "youtube": "https://www.youtube.com/watch?v=psZmAsH6I3Q&t=1s", "imdb": "https://www.imdb.com/fr/title/tt12954622/", "réalisateur": "", "pays": "Angleterre", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": "https://pics.filmaffinity.com/a_cloudy_lesson-431584893-large.jpg"}, {"date": "26/06/2026", "youtube": "https://www.youtube.com/watch?v=r2kdrUDWjEk", "imdb": "https://www.imdb.com/fr/title/tt5062438/?ref_=fn_t_1", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "29/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "30/06/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "02/07/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}, {"date": "03/07/2026", "youtube": "", "imdb": "", "réalisateur": "", "pays": "", "année": "", "durée": "", "genres": "", "synopsis": "", "adresse affiche": ""}];
+const TMDB='fc2817c759c1e767bf6745c22ff51ff9';
+const OMDB='2a82f8f4';
+
+const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+let grouped={};
+let keys=[];
+let current=0;
+
+
+const COUNTRY_FR = {
+'USA':'États-Unis',
+'United States':'États-Unis',
+'France':'France',
+'Japan':'Japon',
+'United Kingdom':'Royaume-Uni',
+'UK':'Royaume-Uni',
+'Canada':'Canada',
+'Germany':'Allemagne',
+'Italy':'Italie',
+'Spain':'Espagne'
+};
+
+function translateCountry(c){
+
+if(!c) return '';
+
+return String(c)
+.split(',')
+.map(x=>COUNTRY_FR[x.trim()] || x.trim())
+.join(', ');
+
+}
+
+const GENRES={
+'Action':'Action',
+'Adventure':'Aventure',
+'Animation':'Animation',
+'Biography':'Biographie',
+'Comedy':'Comédie',
+'Crime':'Policier',
+'Documentary':'Documentaire',
+'Drama':'Drame',
+'Family':'Famille',
+'Fantasy':'Fantastique',
+'History':'Histoire',
+'Horror':'Horreur',
+'Music':'Musique',
+'Mystery':'Mystère',
+'Romance':'Romance',
+'Sci-Fi':'Science-fiction',
+'Sport':'Sport',
+'Thriller':'Thriller',
+'War':'Guerre',
+'Western':'Western'
+};
+
+function translateGenres(g){
+ return String(g||'').split(',').map(x=>GENRES[x.trim()]||x.trim()).join(', ');
+}
+
+function parseFR(s){
+ if(!s) return null;
+ const p=String(s).split('/');
+ if(p.length!==3) return null;
+ return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+}
+
+function imdbId(url){
+ const m=String(url||'').match(/tt\d+/);
+ return m?m[0]:null;
+}
+
+function yt(url){
+ try{
+   const u=new URL(url);
+   if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+   return u.searchParams.get('v');
+ }catch(e){return '';}
+}
+
+async function fetchTMDB(imdb){
+ try{
+   const r=await fetch(`https://api.themoviedb.org/3/find/${imdb}?api_key=${TMDB}&external_source=imdb_id&language=fr-FR`);
+   const d=await r.json();
+   if(d.movie_results && d.movie_results.length){
+      const m=d.movie_results[0];
+      return {
+       title:m.title || '',
+       plot:m.overview || '',
+       year:(m.release_date||'').slice(0,4),
+       poster:m.poster_path ? 'https://image.tmdb.org/t/p/w500'+m.poster_path : ''
+      };
+   }
+ }catch(e){}
+ return {};
+}
+
+async function fetchOMDB(imdb){
+ try{
+   const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB}&i=${imdb}&plot=full`);
+   return await r.json();
+ }catch(e){}
+ return {};
+}
+
+function closeDetail(){
+ document.getElementById('detail').classList.add('hidden');
+ document.getElementById('player').src='';
+}
+
+function openFilm(f){
+ document.getElementById('detail').classList.remove('hidden');
+ document.getElementById('d_title').textContent=f.title||'';
+ document.getElementById('d_director').textContent=f.director||'';
+ document.getElementById('d_country').textContent=f.country||'';
+ document.getElementById('d_year').textContent=f.year||'';
+ document.getElementById('d_runtime').textContent=f.runtime||'';
+ document.getElementById('d_genre').textContent=f.genre||'';
+ document.getElementById('d_plot').textContent=f.plot||'';
+ document.getElementById('bigposter').src=f.poster||'';
+
+ const id=yt(f.youtube);
+ if(id){
+   document.getElementById('player').style.display='block';
+   document.getElementById('player').src='https://www.youtube.com/embed/'+id;
+ } else {
+   document.getElementById('player').style.display='none';
+ }
+}
+
+function render(){
+ const key=keys[current];
+ const films=grouped[key];
+ document.getElementById('monthTitle').textContent=key;
+
+ const cal=document.getElementById('calendar');
+ cal.innerHTML='';
+
+ const grid=document.createElement('div');
+ grid.className='calendar';
+
+ ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].forEach(w=>{
+   const e=document.createElement('div');
+   e.className='week';
+   e.textContent=w;
+   grid.appendChild(e);
+ });
+
+ const firstDay = new Date(films.year, films.month, 1);
+ let start = firstDay.getDay();
+ start = start === 0 ? 6 : start - 1;
+
+ const daysInMonth = new Date(films.year, films.month+1, 0).getDate();
+
+ const map={};
+ films.items.forEach(f=>map[f.day]=f);
+
+ for(let i=0;i<start;i++){
+   const e=document.createElement('div');
+   e.className='cell empty';
+   grid.appendChild(e);
+ }
+
+ for(let d=1; d<=daysInMonth; d++){
+
+   const f=map[d];
+
+   const c=document.createElement('div');
+   c.className='cell';
+
+   if(f){
+      if(f.poster){
+         c.innerHTML=`
+         <img class="poster" src="${f.poster}">
+         <div class="daynum">${d}</div>
+         <div class="overlay">
+         <div style="font-weight:700;font-size:14px">${f.title}</div>
+         </div>`;
+      } else {
+         c.innerHTML=`<div class="daynum">${d}</div>`;
+      }
+
+      c.onclick=()=>openFilm(f);
+
+   } else {
+      c.innerHTML=`<div class="daynum">${d}</div>`;
+   }
+
+   grid.appendChild(c);
+ }
+
+ cal.appendChild(grid);
+}
+
+function prevMonth(){ if(current>0){ current--; render(); } }
+function nextMonth(){ if(current<keys.length-1){ current++; render(); } }
+
+async function init(){
+ for(const row of DATA){
+   const d=parseFR(row.date);
+   if(!d) continue;
+
+   const monthName=MONTHS[d.getMonth()]+' '+d.getFullYear();
+
+   if(!grouped[monthName]){
+      grouped[monthName]={
+         month:d.getMonth(),
+         year:d.getFullYear(),
+         items:[]
+      };
+   }
+
+   const imdb=imdbId(row.imdb||'');
+
+   let tmdb={};
+   let omdb={};
+
+   if(imdb){
+      tmdb=await fetchTMDB(imdb);
+      omdb=await fetchOMDB(imdb);
+   }
+
+   grouped[monthName].items.push({
+      day:d.getDate(),
+      title:tmdb.title || omdb.Title || row.titre || '',
+      director:(omdb.Director && omdb.Director!=='N/A') ? omdb.Director : (row['réalisateur']||''),
+      country:(omdb.Country && omdb.Country!=='N/A') ? omdb.Country : (row['pays']||''),
+      year:tmdb.year || omdb.Year || row['année'] || '',
+      runtime:(omdb.Runtime && omdb.Runtime!=='N/A') ? omdb.Runtime : (row['durée']||''),
+      genre:(omdb.Genre && omdb.Genre!=='N/A') ? translateGenres(omdb.Genre) : (row['genres']||''),
+      plot:tmdb.plot || (omdb.Plot && omdb.Plot!=='N/A' ? omdb.Plot : (row['synopsis']||'')),
+      poster:tmdb.poster || row['adresse affiche'] || '',
+      youtube:row.youtube || ''
+   });
+ }
+
+ keys=Object.keys(grouped).sort((a,b)=>{
+   return new Date(grouped[a].year, grouped[a].month) - new Date(grouped[b].year, grouped[b].month);
+ });
+
+ const now=new Date();
+ const currentName=MONTHS[now.getMonth()]+' '+now.getFullYear();
+ const idx=keys.indexOf(currentName);
+
+ if(idx>=0) current=idx;
+
+ render();
+}
+
+init();
+</script>
+</body>
+</html>
