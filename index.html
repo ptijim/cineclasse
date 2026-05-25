@@ -11,7 +11,17 @@ button{background:#1e293b;color:white;border:none;padding:12px 18px;border-radiu
 #monthTitle{}
 .calendar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;height:calc(100vh - 90px)}
 .week{text-align:center;font-weight:700;opacity:.7;padding:4px;font-size:12px}
-.cell{border-radius:14px;background:#111827;position:relative;overflow:hidden;min-height:0}
+.cell{
+border-radius:14px;
+background:#111827;
+position:relative;
+overflow:hidden;
+min-height:0;
+border:1px solid rgba(255,255,255,.08);
+}
+.emptyDay{
+opacity:.35;
+}
 .empty{background:transparent}
 .poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.1));z-index:1;pointer-events:none}
@@ -129,10 +139,40 @@ function translateGenres(g){
 }
 
 function parseFR(s){
+
  if(!s) return null;
- const p=String(s).split('/');
- if(p.length!==3) return null;
- return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+
+ // dates Excel déjà converties en objets Date
+ if(s instanceof Date && !isNaN(s)){
+    return s;
+ }
+
+ // nombres Excel
+ if(typeof s === 'number'){
+    const excelDate = XLSX.SSF.parse_date_code(s);
+    if(excelDate){
+       return new Date(excelDate.y, excelDate.m-1, excelDate.d);
+    }
+ }
+
+ // formats texte
+ const value = String(s).trim();
+
+ // format JJ/MM/AAAA
+ if(value.includes('/')){
+    const p=value.split('/');
+    if(p.length===3){
+       return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+    }
+ }
+
+ // format ISO AAAA-MM-JJ
+ if(value.includes('-')){
+    const d = new Date(value);
+    if(!isNaN(d)) return d;
+ }
+
+ return null;
 }
 
 function imdbId(url){
@@ -365,7 +405,6 @@ document.getElementById('loading').style.display='none';
  for(let d=1; d<=daysInMonth; d++){
 
    const testDate = new Date(films.year, films.month, d);
-
    const weekday = testDate.getDay();
 
    // ignorer samedi(6) et dimanche(0)
@@ -373,36 +412,43 @@ document.getElementById('loading').style.display='none';
       continue;
    }
 
-   const f=map[d];
+   const f = map[d];
 
    const c=document.createElement('div');
    c.className='cell';
 
    if(f){
+
       const title=escapeHTML(f.title);
+
       if(f.poster){
          c.innerHTML=`
          <img class="poster" src="${f.poster}">
          <div class="daynum">${d}</div>
-         <div class="overlay">
+         <div class="overlay"></div>
          <div class="filmTitle">${title}</div>
-         </div>`;
+         `;
       } else {
          c.innerHTML=`
          <div class="daynum">${d}</div>
-         <div class="overlay">
+         <div class="overlay"></div>
          <div class="filmTitle">${title}</div>
-         </div>`;
+         `;
       }
 
       c.onclick=()=>openFilm(f);
 
    } else {
-      c.innerHTML=`<div class="daynum">${d}</div>`;
+
+      c.classList.add('emptyDay');
+
+      c.innerHTML=`
+      <div class="daynum">${d}</div>
+      `;
    }
 
    grid.appendChild(c);
- }
+}
 
  cal.appendChild(grid);
 }
@@ -456,15 +502,18 @@ async function enrichFilm(item){
    const omdbPlot=(omdb.Plot && omdb.Plot!=='N/A') ? omdb.Plot : '';
    const plot=tmdb.plot || excelPlot || await translateToFrench(omdbPlot);
 
+   // le titre du fichier Excel est prioritaire
+   const excelTitle = cell(row,['titre','title']);
+
    Object.assign(item.film,{
-      title:tmdb.title || omdb.Title || cell(row,['titre','title']) || '',
-      director:tmdb.director || cell(row,['réalisateur','realisateur','director']) || ((omdb.Director && omdb.Director!=='N/A') ? omdb.Director : ''),
-      country:tmdb.country || cell(row,['pays','country']) || '',
-      year:tmdb.year || omdb.Year || cell(row,['année','annee','year']) || '',
-      runtime:tmdb.runtime || ((omdb.Runtime && omdb.Runtime!=='N/A') ? omdb.Runtime : (cell(row,['durée','duree','runtime'])||'')),
-      genre:tmdb.genre || cell(row,['genres','genre']) || ((omdb.Genre && omdb.Genre!=='N/A') ? translateGenres(omdb.Genre) : ''),
+      title:excelTitle || tmdb.title || omdb.Title || '',
+      director:cell(row,['réalisateur','realisateur','director']) || tmdb.director || ((omdb.Director && omdb.Director!=='N/A') ? omdb.Director : ''),
+      country:cell(row,['pays','country']) || tmdb.country || '',
+      year:cell(row,['année','annee','year']) || tmdb.year || omdb.Year || '',
+      runtime:cell(row,['durée','duree','runtime']) || tmdb.runtime || ((omdb.Runtime && omdb.Runtime!=='N/A') ? omdb.Runtime : ''),
+      genre:cell(row,['genres','genre']) || tmdb.genre || ((omdb.Genre && omdb.Genre!=='N/A') ? translateGenres(omdb.Genre) : ''),
       plot:plot,
-      poster:tmdb.poster || cell(row,['adresse affiche','affiche','poster']) || ''
+      poster:cell(row,['adresse affiche','affiche','poster']) || tmdb.poster || ''
    });
 }
 
