@@ -18,9 +18,16 @@ button{background:#1e293b;color:white;border:none;padding:12px 18px;border-radiu
 .daynum{position:absolute;top:5px;right:7px;font-size:16px;font-weight:900;z-index:2}
 .hidden{display:none}
 #detail{position:fixed;inset:0;background:#020617;padding:16px;overflow:hidden;z-index:50;height:100vh;box-sizing:border-box}
-.detail{display:grid;grid-template-columns:300px 1fr;gap:24px;height:calc(100vh - 90px);align-items:start;overflow:hidden}
+.detail{display:grid;grid-template-columns:300px 1fr;grid-template-rows:minmax(0,1fr) auto;gap:18px 24px;height:calc(100vh - 90px);align-items:start;overflow:auto}
+.info{height:100%;overflow:auto;padding-right:8px}
 .big{width:100%;max-width:300px;max-height:82vh;object-fit:contain;border-radius:20px}
-iframe{width:100%;max-height:38vh;aspect-ratio:16/9;border:none;border-radius:20px;background:black}
+iframe{width:100%;height:auto;min-height:220px;max-height:38vh;aspect-ratio:16/9;border:none;border-radius:20px;background:black}
+.videoBox,.questionsBox{background:#0f172a;border:1px solid #334155;border-radius:14px;padding:12px;margin:12px 0}
+.boxTitle{font-weight:900;margin-bottom:8px}
+.emptyMessage{opacity:.72}
+.videoLink{display:inline-block;color:white;background:#1e293b;text-decoration:none;border-radius:10px;padding:10px 12px;margin-top:10px}
+.questionsBox{grid-column:1 / -1;margin:0}
+.questionsText{white-space:pre-line;line-height:1.45}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -47,22 +54,30 @@ font-size:32px;
 font-weight:900;
 letter-spacing:.5px;
 ">
-🎬 Chargement du fichier film.xlsx…
+Veuillez patienter
 </div><div id="calendar" style="content-visibility:auto"></div>
 
 <div id="detail" class="hidden">
 <button onclick="closeDetail()">⬅ Retour</button>
 <div class="detail" style="margin-top:20px">
 <div><img id="bigposter" class="big"></div>
-<div>
+<div class="info">
 <h1 id="d_title" style="margin-top:0;margin-bottom:12px;font-size:2rem"></h1>
+<div class="videoBox">
+<iframe id="player" allowfullscreen></iframe>
+<div id="d_video_msg" class="emptyMessage hidden">Aucune vidéo renseignée pour ce film.</div>
+<a id="videoLink" class="videoLink hidden" href="#" target="_blank" rel="noopener">Ouvrir la vidéo</a>
+</div>
 <p><b>Réalisateur :</b> <span id="d_director"></span></p>
 <p><b>Pays :</b> <span id="d_country"></span></p>
 <p><b>Année :</b> <span id="d_year"></span></p>
 <p><b>Durée :</b> <span id="d_runtime"></span></p>
 <p><b>Genres :</b> <span id="d_genre"></span></p>
 <p><b>Synopsis :</b></p><p id="d_plot"></p>
-<iframe id="player"></iframe>
+</div>
+<div id="questionsBox" class="questionsBox hidden">
+<div class="boxTitle">Questions</div>
+<div id="d_questions" class="questionsText"></div>
 </div>
 </div>
 </div>
@@ -124,11 +139,25 @@ function imdbId(url){
  return m?m[0]:null;
 }
 
+function normalizeKey(s){
+ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+}
+
+function cell(row, names){
+ const wanted=names.map(normalizeKey);
+ for(const key of Object.keys(row)){
+   if(wanted.includes(normalizeKey(key))) return row[key] || '';
+ }
+ return '';
+}
+
 function yt(url){
  try{
    const u=new URL(url);
-   if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
-   return u.searchParams.get('v');
+   if(u.hostname.includes('youtu.be')) return u.pathname.split('/').filter(Boolean)[0] || '';
+   if(u.pathname.includes('/embed/')) return u.pathname.split('/embed/')[1].split('/')[0];
+   if(u.pathname.includes('/shorts/')) return u.pathname.split('/shorts/')[1].split('/')[0];
+   return u.searchParams.get('v') || '';
  }catch(e){return '';}
 }
 
@@ -205,6 +234,8 @@ async function fetchOMDB(imdb){
 function closeDetail(){
  document.getElementById('detail').classList.add('hidden');
  document.getElementById('player').src='';
+ document.getElementById('d_video_msg').classList.add('hidden');
+ document.getElementById('videoLink').classList.add('hidden');
 }
 
 function openFilm(f){
@@ -218,13 +249,27 @@ function openFilm(f){
  document.getElementById('d_plot').textContent=f.plot||'';
  document.getElementById('bigposter').src=f.poster||'';
 
+ const player=document.getElementById('player');
+ const videoMsg=document.getElementById('d_video_msg');
+ const videoLink=document.getElementById('videoLink');
  const id=yt(f.youtube);
  if(id){
-   document.getElementById('player').style.display='block';
-   document.getElementById('player').src='https://www.youtube.com/embed/'+id;
+   player.style.display='block';
+   player.src='https://www.youtube-nocookie.com/embed/'+id;
+   videoLink.href=f.youtube;
+   videoLink.classList.remove('hidden');
+   videoMsg.classList.add('hidden');
  } else {
-   document.getElementById('player').style.display='none';
+   player.src='';
+   player.style.display='none';
+   videoLink.href='#';
+   videoLink.classList.add('hidden');
+   videoMsg.classList.remove('hidden');
  }
+
+ const questions=String(f.questions||'').trim();
+ document.getElementById('d_questions').textContent=questions;
+ document.getElementById('questionsBox').classList.toggle('hidden', !questions);
 }
 
 function render(){
@@ -310,68 +355,89 @@ document.getElementById('loading').style.display='none';
 function prevMonth(){ if(current>0){ current--; render(); } }
 function nextMonth(){ if(current<keys.length-1){ current++; render(); } }
 
-async function init(){
- for(const row of DATA){
-   const d=parseFR(row.date);
-   if(!d) continue;
+function buildBaseFilm(row){
+   const d=parseFR(cell(row,['date']));
+   if(!d) return null;
 
-   const monthName=MONTHS[d.getMonth()]+' '+d.getFullYear();
+   const imdb=imdbId(cell(row,['imdb']));
 
-   if(!grouped[monthName]){
-      grouped[monthName]={
-         month:d.getMonth(),
-         year:d.getFullYear(),
-         items:[]
-      };
-   }
+   return {
+      row:row,
+      imdb:imdb,
+      monthName:MONTHS[d.getMonth()]+' '+d.getFullYear(),
+      month:d.getMonth(),
+      year:d.getFullYear(),
+      film:{
+         day:d.getDate(),
+         title:cell(row,['titre','title']) || '',
+         director:cell(row,['réalisateur','realisateur','director'])||'',
+         country:cell(row,['pays','country'])||'',
+         year:cell(row,['année','annee','year']) || '',
+         runtime:cell(row,['durée','duree','runtime'])||'',
+         genre:cell(row,['genres','genre'])||'',
+         plot:cell(row,['synopsis','plot'])||'',
+         poster:cell(row,['adresse affiche','affiche','poster']) || '',
+         youtube:cell(row,['youtube','video','bande annonce','bande-annonce','trailer']) || '',
+         questions:cell(row,['questions','question']) || ''
+      }
+   };
+}
 
-   const imdb=imdbId(row.imdb||'');
+async function enrichFilm(item){
+   const row=item.row;
+   const imdb=item.imdb;
 
    let tmdb={};
    let omdb={};
 
-   if(imdb){
-      tmdb=await fetchTMDB(imdb);
-      omdb=await fetchOMDB(imdb);
-   }
+   if(!imdb) return;
 
-   const director =
-(omdb.Director && omdb.Director!=='N/A')
-? await translate(omdb.Director)
-: (row['réalisateur']||'');
+   [tmdb, omdb]=await Promise.all([
+      fetchTMDB(imdb),
+      fetchOMDB(imdb)
+   ]);
 
-const country =
-(omdb.Country && omdb.Country!=='N/A')
-? await translate(omdb.Country)
-: (row['pays']||'');
+   const [director, country, genre, translatedPlot] = await Promise.all([
+      (omdb.Director && omdb.Director!=='N/A')
+         ? translate(omdb.Director)
+         : Promise.resolve(cell(row,['réalisateur','realisateur','director'])||''),
+      (omdb.Country && omdb.Country!=='N/A')
+         ? translate(omdb.Country)
+         : Promise.resolve(cell(row,['pays','country'])||''),
+      (omdb.Genre && omdb.Genre!=='N/A')
+         ? translate(translateGenres(omdb.Genre))
+         : Promise.resolve(cell(row,['genres','genre'])||''),
+      (!tmdb.plot && omdb.Plot && omdb.Plot!=='N/A')
+         ? translate(omdb.Plot)
+         : Promise.resolve('')
+   ]);
 
-const genre =
-(omdb.Genre && omdb.Genre!=='N/A')
-? await translate(translateGenres(omdb.Genre))
-: (row['genres']||'');
-
-const plot =
-tmdb.plot
-? tmdb.plot
-: (
-(omdb.Plot && omdb.Plot!=='N/A')
-? await translate(omdb.Plot)
-: (row['synopsis']||'')
-);
-
-grouped[monthName].items.push({
-      day:d.getDate(),
-      title:tmdb.title || omdb.Title || row.titre || '',
+   Object.assign(item.film,{
+      title:tmdb.title || omdb.Title || cell(row,['titre','title']) || '',
       director:director,
       country:country,
-      year:tmdb.year || omdb.Year || row['année'] || '',
-      runtime:(omdb.Runtime && omdb.Runtime!=='N/A') ? omdb.Runtime : (row['durée']||''),
+      year:tmdb.year || omdb.Year || cell(row,['année','annee','year']) || '',
+      runtime:(omdb.Runtime && omdb.Runtime!=='N/A') ? omdb.Runtime : (cell(row,['durée','duree','runtime'])||''),
       genre:genre,
-      plot:plot,
-      poster:tmdb.poster || row['adresse affiche'] || '',
-      youtube:row.youtube || ''
+      plot:tmdb.plot || translatedPlot || cell(row,['synopsis','plot']) || '',
+      poster:tmdb.poster || cell(row,['adresse affiche','affiche','poster']) || ''
    });
- }
+}
+
+async function init(){
+ const films=DATA.map(buildBaseFilm).filter(Boolean);
+
+ films.forEach(item=>{
+   if(!grouped[item.monthName]){
+      grouped[item.monthName]={
+         month:item.month,
+         year:item.year,
+         items:[]
+      };
+   }
+
+   grouped[item.monthName].items.push(item.film);
+ });
 
  keys=Object.keys(grouped).sort((a,b)=>{
    return new Date(grouped[a].year, grouped[a].month) - new Date(grouped[b].year, grouped[b].month);
@@ -384,6 +450,8 @@ grouped[monthName].items.push({
  if(idx>=0) current=idx;
 
  render();
+
+ Promise.all(films.map(enrichFilm)).then(render);
 }
 
 
